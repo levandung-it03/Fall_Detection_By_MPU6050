@@ -23,6 +23,7 @@ WebSocketsClient webSocket;
 MPU6050 mpu6050(Wire);
 WiFiUDP ntpUDP;
 bool isSending = false;
+int currentTime = 0, delayTime = 100, limitedTime = 3000;
 
 void setup() {
   Serial.begin(115200);
@@ -47,22 +48,31 @@ void setup() {
 void loop() {
   mpu6050.update();
   webSocket.loop();
+  String jsonData = "ping";
   
   // Create JSON payload
   if (isSending) {
-    String jsonData = "{\"ax\": " + String(mpu6050.getAccX()) +
+    currentTime += delayTime;
+    jsonData = "{\"ax\": " + String(mpu6050.getAccX()) +
                     ", \"ay\": " + String(mpu6050.getAccY()) +
                     ", \"az\": " + String(mpu6050.getAccZ()) +
                     ", \"gx\": " + String(mpu6050.getGyroAngleX()) +
                     ", \"gy\": " + String(mpu6050.getGyroAngleY()) +
                     ", \"gz\": " + String(mpu6050.getGyroAngleZ()) +
-                    ", \"m\": " + String(millis()) + "}";
-    Serial.print(jsonData);
-    webSocket.sendTXT(jsonData);
+                    ", \"m\": " + String(millis());
+
+    if (currentTime > limitedTime) {
+      jsonData += ", \"offStatus\": 1}";
+      isSending = false;
+    } else {
+      jsonData += "}";
+    }
+  } else {
+    currentTime = 0;
   }
-  
-  webSocket.sendTXT("ping");
-  delay(100);
+  Serial.println("Is sending: " + String(isSending) + ", Current time: " + String(currentTime));
+  webSocket.sendTXT(jsonData);
+  delay(delayTime);
 }
 
 // Xử lý sự kiện WebSocket
@@ -77,10 +87,8 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
     case WStype_TEXT:
       if (strcmp((char*)payload, "on") == 0) {
         isSending = true;
-        Serial.println("[V] Started sending data.");
       } else if (strcmp((char*)payload, "off") == 0) {
         isSending = false;
-        Serial.println("[X] Stopped sending data.");
       }
       break;
     default:

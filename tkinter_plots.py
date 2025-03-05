@@ -6,7 +6,7 @@ from tkinter import ttk
 
 # Định nghĩa thư mục gốc
 BASE_DIR = os.path.join(os.getcwd(), "dataset")
-FOLDERS = ["sit", "fall", "drop", "lie"]
+FOLDERS = ["sit", "fall", "lie"]
 
 for folder in FOLDERS:
     folder_path = os.path.join(BASE_DIR, folder)

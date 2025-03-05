@@ -1,5 +1,12 @@
 import pandas as pd
 
-def append_to_csv(file_path, new_data):
-    df = pd.DataFrame([new_data])
-    df.to_csv(file_path, mode='a', header=False, index=False)
+import os
+import pandas as pd
+
+
+def append_to_csv(file_path, new_data, columns):
+    file_exists = os.path.exists(file_path)
+
+    df = pd.DataFrame([new_data], columns=columns)
+
+    df.to_csv(file_path, mode='a', header=not file_exists, index=False)
