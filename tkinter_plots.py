@@ -78,7 +78,7 @@ class CSVViewerApp:
                          marker="o")
 
         axes[0].set_ylabel("Acceleration (m/s²)")
-        axes[0].set_title("MPU6050 Acceleration Data")
+        axes[0].set_title("MPU6050 Acceleration Data: " + file_path)
         axes[0].legend()
         axes[0].grid(True)
 
