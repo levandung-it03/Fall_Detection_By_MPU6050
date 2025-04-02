@@ -36,9 +36,9 @@ QueueHandle_t mpuQueue;
 
 // Queue Configuration
 #define MAX_BUFFER_SAMPLES 60
-#define PREDICT_WINDOW 20
+#define PREDICT_WINDOW 15
 #define SENSOR_DELAY 100  // 100ms per sample
-#define ACC_THRESHOLD 1.5
+#define ACC_THRESHOLD 1.15
 
 void runInference(float input_data[PREDICT_WINDOW][6]) {
   // Copy data into the input tensor
@@ -109,6 +109,12 @@ void readMPU6050Task(void* pvParameters) {
       sample[3] = mpu6050.getGyroX();
       sample[4] = mpu6050.getGyroY();
       sample[5] = mpu6050.getGyroZ();
+      Serial.print(sample[0]);Serial.print(",");
+      Serial.print(sample[1]);Serial.print(",");
+      Serial.print(sample[2]);Serial.print(",");
+      Serial.print(sample[3]);Serial.print(",");
+      Serial.print(sample[4]);Serial.print(",");
+      Serial.println(sample[5]);
       // Add sample to queue
       if (xQueueSend(mpuQueue, &sample, portMAX_DELAY) != pdPASS) {
         Serial.println("Queue is full, dropping data!");

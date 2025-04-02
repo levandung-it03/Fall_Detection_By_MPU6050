@@ -30,10 +30,10 @@ model = tf.keras.Sequential()
     pool_size(feature of CNN more than NeuralNetwork):
     -> Get 1 greatest value of each 2 values in a block to decrease calculating time.
 """
-model.add(tf.keras.layers.Conv1D(filters=14, kernel_size=4, activation='relu',
+model.add(tf.keras.layers.Conv1D(filters=16, kernel_size=4, activation='relu',
                                  input_shape=(X_train.shape[1], X_train.shape[2])))
 model.add(tf.keras.layers.MaxPooling1D(pool_size=2, strides=1, padding='same'))
-model.add(tf.keras.layers.Conv1D(filters=8, kernel_size=2, activation='relu'))
+model.add(tf.keras.layers.Conv1D(filters=16, kernel_size=2, activation='relu'))
 model.add(tf.keras.layers.MaxPooling1D(pool_size=2, strides=1, padding='same'))
 """
     - layers.Flatten
