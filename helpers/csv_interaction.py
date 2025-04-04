@@ -32,29 +32,16 @@ def readAndMergeAllCSVsFromDatasetFolder(url):
     else:
         return None  # Return None if no CSV files are found
 
-def readAndMergeAllCSVsFromDatasetFolderWithTrainTest(url, train_rate=1):
-    url = os.path.join(root_folder, url)
+def readAndMergeAllCSV(train_url, test_url):
+    train_url = os.path.join(root_folder, train_url)
+    test_url = os.path.join(root_folder, test_url)
 
-    all_files = [file for file in os.listdir(url) if file.endswith(".csv")]
+    train_files = [file for file in os.listdir(train_url) if file.endswith(".csv")]
+    test_files = [file for file in os.listdir(test_url) if file.endswith(".csv")]
 
-    selected_indices = set(random.sample(range(len(all_files)), int(train_rate * len(all_files))))
+    train_dfs = [pd.read_csv(train_url + file) for file in train_files]
+    test_dfs = [pd.read_csv(test_url + file) for file in test_files]
 
-    merged_test_files = []   # Selected `n` files for testing
-    merged_train_files = []  # Remaining files for training
-
-    for index, file in enumerate(all_files):
-        file_path = os.path.join(url, file)
-        df = pd.read_csv(file_path)  # Read CSV
-
-        if index in selected_indices:
-            merged_train_files.append(df)
-        else:
-            merged_test_files.append(df)
-
-    print(url, "selected indices: ", selected_indices)
-    if (train_rate == 1 and merged_train_files) or (merged_test_files and merged_train_files):
-        merged_train_df = pd.concat(merged_train_files, ignore_index=True)  # Merge all DataFrames
-        merged_test_df = pd.concat(merged_test_files, ignore_index=True)  # Merge all DataFrames
-        return merged_train_df, merged_test_df
-    else:
-        return None, None
+    merged_train_df = pd.concat(train_dfs, ignore_index=True)  # Merge all DataFrames
+    merged_test_df = pd.concat(test_dfs, ignore_index=True)  # Merge all DataFrames
+    return merged_train_df, merged_test_df

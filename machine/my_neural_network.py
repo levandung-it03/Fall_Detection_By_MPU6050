@@ -3,14 +3,14 @@ import os
 
 import tensorflow as tf
 
-from helpers.csv_interaction import readAndMergeAllCSVsFromDatasetFolderWithTrainTest
+from helpers.csv_interaction import readAndMergeAllCSV
 from machine.machine_base import preProcessDataset, NUM_GESTURES, BATCH_SIZE, hex_to_c_array
 
-fall_train_df, fall_test_df = readAndMergeAllCSVsFromDatasetFolderWithTrainTest("dataset/fall/", train_rate=0.8)
-lie_train_df, lie_test_df = readAndMergeAllCSVsFromDatasetFolderWithTrainTest("dataset/lie/", train_rate=0.8)
-sit_train_df, sit_test_df = readAndMergeAllCSVsFromDatasetFolderWithTrainTest("dataset/sit/", train_rate=0.8)
-run_train_df, run_test_df = readAndMergeAllCSVsFromDatasetFolderWithTrainTest("dataset/run/", train_rate=0.8)
-stand_train_df, stand_test_df = readAndMergeAllCSVsFromDatasetFolderWithTrainTest("dataset/stand/", train_rate=0.8)
+fall_train_df, fall_test_df = readAndMergeAllCSV("dataset/fall/", "dataset_test/fall/")
+lie_train_df, lie_test_df = readAndMergeAllCSV("dataset/lie/", "dataset_test/lie/")
+sit_train_df, sit_test_df = readAndMergeAllCSV("dataset/sit/", "dataset_test/sit/")
+run_train_df, run_test_df = readAndMergeAllCSV("dataset/run/", "dataset_test/run/")
+stand_train_df, stand_test_df = readAndMergeAllCSV("dataset/stand/", "dataset_test/stand/")
 
 # Train-Test splitting
 X_train, y_train = preProcessDataset(fall_train_df, lie_train_df, sit_train_df, run_train_df, stand_train_df)
@@ -30,10 +30,10 @@ model = tf.keras.Sequential()
     pool_size(feature of CNN more than NeuralNetwork):
     -> Get 1 greatest value of each 2 values in a block to decrease calculating time.
 """
-model.add(tf.keras.layers.Conv1D(filters=16, kernel_size=4, activation='relu',
+model.add(tf.keras.layers.Conv1D(filters=14, kernel_size=4, activation='relu',
                                  input_shape=(X_train.shape[1], X_train.shape[2])))
 model.add(tf.keras.layers.MaxPooling1D(pool_size=2, strides=1, padding='same'))
-model.add(tf.keras.layers.Conv1D(filters=16, kernel_size=2, activation='relu'))
+model.add(tf.keras.layers.Conv1D(filters=12, kernel_size=2, activation='relu'))
 model.add(tf.keras.layers.MaxPooling1D(pool_size=2, strides=1, padding='same'))
 """
     - layers.Flatten
@@ -50,7 +50,7 @@ model.add(tf.keras.layers.Dense(NUM_GESTURES, activation='softmax'))
 model.compile(optimizer='Adam', loss='mse', metrics=['mae'])  # Compiling Model with some testing configuration.
 model.summary()  # Show built model
 
-history = model.fit(X_train, y_train, epochs=75, batch_size=BATCH_SIZE, validation_data=(X_val, y_val))
+history = model.fit(X_train, y_train, epochs=50, batch_size=BATCH_SIZE, validation_data=(X_val, y_val))
 
 # Convert the model to the TensorFlow Lite format without quantization
 converter = tf.lite.TFLiteConverter.from_keras_model(model)
