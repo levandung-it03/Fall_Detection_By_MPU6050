@@ -13,7 +13,7 @@ target_outputs = [
     [0, 0, 0, 1, 0],
     [0, 0, 0, 0, 1]
 ]
-BATCH_SIZE = 30 # Hard-set BATCH_SIZE as the length of each block action.
+BATCH_SIZE = 10 # Hard-set BATCH_SIZE as the length of each block action.
 
 SAMPLES_PER_GESTURE = 24
 NUM_GESTURES = len(GESTURES)
