@@ -37,9 +37,8 @@ QueueHandle_t mpuQueue;
 
 // Queue Configuration
 #define MAX_BUFFER_SAMPLES 60
-#define PREDICT_WINDOW 15
+#define PREDICT_WINDOW 10
 #define SENSOR_DELAY 100  // 100ms per sample
-#define ACC_THRESHOLD 12.5
 
 void runInference(float input_data[PREDICT_WINDOW][6]) {
   for (int i = 0; i < PREDICT_WINDOW * 6; i++) {
@@ -87,28 +86,30 @@ void readMPU6050Task(void* pvParameters) {
   while (1) {
     mpu.getEvent(&a, &g, &temp);
 
-    if ((abs(a.acceleration.x) + 10) <= ACC_THRESHOLD
-      && (abs(a.acceleration.y) + 10) <= ACC_THRESHOLD
-      && (abs(a.acceleration.z) + 10) <= ACC_THRESHOLD
-      && uxQueueMessagesWaiting(mpuQueue) == 0) {
+    if (uxQueueMessagesWaiting(mpuQueue) != 0
+      || 8 >= abs(a.acceleration.x) || abs(a.acceleration.x) >= 12
+      || -3.5 >= abs(a.acceleration.y) || abs(a.acceleration.y) >= 3.5
+      || -3.5 >= abs(a.acceleration.z) || abs(a.acceleration.z) >= 3.5) {
+
+      sample[0] = a.acceleration.x;
+      sample[1] = a.acceleration.y;
+      sample[2] = a.acceleration.z;
+      sample[3] = g.gyro.x;
+      sample[4] = g.gyro.y;
+      sample[5] = g.gyro.z;
+      
+      Serial.printf("x: %f, y: %f, z: %f\n", sample[0], sample[1], sample[2]);
+
+      if (xQueueSend(mpuQueue, &sample, portMAX_DELAY) != pdPASS) {
+        Serial.println("Queue is full, dropping data!");
+      }
+      vTaskDelay(pdMS_TO_TICKS(SENSOR_DELAY));
+    } else {
       vTaskDelay(pdMS_TO_TICKS(SENSOR_DELAY));
       continue;
+
     }
 
-    sample[0] = a.acceleration.x;
-    sample[1] = a.acceleration.y;
-    sample[2] = a.acceleration.z;
-    sample[3] = g.gyro.x;
-    sample[4] = g.gyro.y;
-    sample[5] = g.gyro.z;
-    
-    Serial.printf("%f, %f, %f, %f, %f, %f\n", sample[0], sample[1], sample[2], sample[3], sample[4], sample[5]);
-
-    if (xQueueSend(mpuQueue, &sample, portMAX_DELAY) != pdPASS) {
-      Serial.println("Queue is full, dropping data!");
-    }
-
-    vTaskDelay(pdMS_TO_TICKS(SENSOR_DELAY));
   }
 }
 
