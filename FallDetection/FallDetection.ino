@@ -90,9 +90,6 @@ void readMPU6050Task(void* pvParameters) {
     if ((abs(a.acceleration.x) + 10) <= ACC_THRESHOLD
       && (abs(a.acceleration.y) + 10) <= ACC_THRESHOLD
       && (abs(a.acceleration.z) + 10) <= ACC_THRESHOLD
-      && (abs(a.acceleration.x) - 10) <= ACC_THRESHOLD
-      && (abs(a.acceleration.y) - 10) <= ACC_THRESHOLD
-      && (abs(a.acceleration.z) - 10) <= ACC_THRESHOLD
       && uxQueueMessagesWaiting(mpuQueue) == 0) {
       vTaskDelay(pdMS_TO_TICKS(SENSOR_DELAY));
       continue;
