@@ -44,6 +44,7 @@ QueueHandle_t mpuQueue;
 // WiFi Client configuration
 WiFiMulti WiFiMulti;
 bool isReceiving = false;
+bool isLocking = false;
 
 // Queue Configuration
 #define MAX_BUFFER_SAMPLES 60
@@ -179,6 +180,7 @@ void predictWithModel(void* pvParameters) {
   float input_data[PREDICT_WINDOW][6];
   while (1) {
     if (uxQueueMessagesWaiting(mpuQueue) >= PREDICT_WINDOW) {
+      isLocking = true;
       Serial.println("Running TensorFlow Lite Model...");
       // "isReceiving" just stop adding new data into current block (to avoid 1_block has 11_lines, instead of default 10_lines)
       // If acceleration is high, it still adds new data into buffer, but as data of the new block.
@@ -194,6 +196,9 @@ void predictWithModel(void* pvParameters) {
         "/api/public/v1/mpu-pred-cls",
         "{\"mpu_best_class\":\"" + runInference(input_data) + "\",\"user_id\":" + String(USER_ID) + "}"
         );
+      Serial.println("Locking in 2s...");
+      vTaskDelay(pdMS_TO_TICKS(2000));
+      isLocking = false;
     }
     vTaskDelay(pdMS_TO_TICKS(SENSOR_DELAY));
   }
@@ -207,12 +212,17 @@ void readMPU6050Task(void* pvParameters) {
     mpu.getEvent(&a, &g, &temp);
     // Checking every beginning of the next block(10lines), except the 1fs line (in total 60lines).
     // The current mpu6050 data is beginning of a block = mpuQueue has enough "n" blocks (10lines, 20lines, 30lines...).
-    if (isReceiving
+    if (isLocking) {
+      Serial.print(".");
+    } else if (isReceiving
       || abs(a.acceleration.x) <= 8 || 12 <= abs(a.acceleration.x)
       || abs(a.acceleration.y) <= -3 || 3 <= abs(a.acceleration.y)
       || abs(a.acceleration.z) <= -3 || 3 <= abs(a.acceleration.z)) {
-      if (isReceiving == false)
+      
+      if (isReceiving == false) {
         sendPostRequest("/api/public/v1/on-cam-pred-sts", "{\"user_id\":" + String(USER_ID) + "}");
+        Serial.println();
+      }
       isReceiving = true;
 
       sample[0] = a.acceleration.x;
