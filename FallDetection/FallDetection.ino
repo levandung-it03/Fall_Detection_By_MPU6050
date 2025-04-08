@@ -34,7 +34,7 @@ constexpr int tensorArenaSize = 32 * 1024;
 byte tensorArena[tensorArenaSize] __attribute__((aligned(16)));
 
 // Gesture names
-const char* GESTURES[] = { "fall", "lie", "sit", "run", "stand" };
+const char* GESTURES[] = { "fall", "lie", "sit", "walk", "stand" };
 #define NUM_GESTURES (sizeof(GESTURES) / sizeof(GESTURES[0]))
 
 // MPU6050 Sensor
