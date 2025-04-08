@@ -48,8 +48,8 @@ bool isLocking = false;
 
 // Queue Configuration
 #define MAX_BUFFER_SAMPLES 60
-#define PREDICT_WINDOW 10
-#define SENSOR_DELAY 100  // 100ms per sample
+#define PREDICT_WINDOW 20
+#define SENSOR_DELAY 100  // 100ms per sample 
 
 // Connection Configuration
 String WIFI_SSID, WIFI_PASSWORD, FASTAPI_HOST, FASTAPI_PORT, USER_ID;
