@@ -14,40 +14,48 @@ output_details = interpreter.get_output_details()
 input_index = input_details[0]['index']
 output_index = output_details[0]['index']
 
-# Load and preprocess the dataset
-fall_predict = readSpecifiedTypeCSV("dataset/fall/fall11.csv")  # Load CSV file
-fall_predict = normalize_dataset(fall_predict)  # Normalize the dataset
+def predict(url):
+    # Load and preprocess the dataset
+    data = readSpecifiedTypeCSV(url)  # Load CSV file
+    data = normalize_dataset(data)  # Normalize the dataset
 
-# Assign the correct label (assuming target_outputs[0] corresponds to "fall")
-fall_predict[LABEL] = [target_outputs[0]] * len(fall_predict)
+    # Assign the correct label (assuming target_outputs[0] corresponds to "fall")
+    data[LABEL] = [target_outputs[0]] * len(data)
 
-# Extract features and labels
-X_predict = fall_predict[FEATURES].values.astype(np.float32)  # Get feature values as a NumPy array
+    # Extract features and labels
+    X_predict = data[FEATURES].values.astype(np.float32)  # Get feature values as a NumPy array
 
-# Run inference for each sample
-appearances = [0] * len(FEATURES)
-output_data_arr = []
+    # Run inference for each sample
+    appearances = [0] * len(GESTURES)
+    output_data_arr = []
 
-for i in range(len(X_predict)):
-    sample = X_predict[i].reshape(1, 6, 1)
+    for i in range(len(X_predict)):
+        sample = X_predict[i].reshape(1, 6, 1)
 
-    # Set model input tensor
-    interpreter.set_tensor(input_details[0]['index'], sample)
+        # Set model input tensor
+        interpreter.set_tensor(input_details[0]['index'], sample)
 
-    # Run inference
-    interpreter.invoke()
+        # Run inference
+        interpreter.invoke()
 
-    # Get output tensor
-    output_data = interpreter.get_tensor(output_details[0]['index'])
-    output_data_arr.append(output_data[0])
+        # Get output tensor
+        output_data = interpreter.get_tensor(output_details[0]['index'])
+        output_data_arr.append(output_data[0])
 
-    # Store prediction
-    appearances[np.argmax(output_data[0])] += 1
+        # Store prediction
+        appearances[np.argmax(output_data[0])] += 1
+
+    # Print results
+    print("From: ", url, ", appearances: ", appearances, " - Predicted Labels:", GESTURES[np.argmax(appearances)])
 
 
-# Print results
-print("output arr: ", output_data_arr)
-print("appearances: ", appearances)
-print("Predicted Labels:", GESTURES[np.argmax(appearances)])
-
+def run_prediction():
+    predict("testing/fall_forward.csv")
+    predict("testing/fall_forward2.csv")
+    predict("testing/fall_back.csv")
+    predict("testing/fall_back2.csv")
+    predict("testing/stand.csv")
+    predict("testing/stand2.csv")
+    predict("testing/chill.csv")
+    predict("testing/chill2.csv")
 

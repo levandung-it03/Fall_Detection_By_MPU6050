@@ -5,6 +5,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_MPU6050.h>
+#include "esp_timer.h"
 
 #include <HTTPClient.h>
 #include <WiFi.h>
@@ -34,7 +35,8 @@ constexpr int tensorArenaSize = 32 * 1024;
 byte tensorArena[tensorArenaSize] __attribute__((aligned(16)));
 
 // Gesture names
-const char* GESTURES[] = { "fall", "lie", "sit", "walk", "stand" };
+const char* GESTURES[] = { "fall_back", "fall_forw", "stand", "chill" };
+// const char* GESTURES[] = { "stand", "chill" };
 #define NUM_GESTURES (sizeof(GESTURES) / sizeof(GESTURES[0]))
 
 // MPU6050 Sensor
@@ -47,9 +49,9 @@ bool isReceiving = false;
 bool isLocking = false;
 
 // Queue Configuration
-#define MAX_BUFFER_SAMPLES 60
-#define PREDICT_WINDOW 20
-#define SENSOR_DELAY 100  // 100ms per sample 
+#define MAX_BUFFER_SAMPLES 45
+#define PREDICT_WINDOW 15
+#define SENSOR_DELAY 50  // 100ms per sample
 
 // Connection Configuration
 String WIFI_SSID, WIFI_PASSWORD, FASTAPI_HOST, FASTAPI_PORT, USER_ID;
@@ -142,15 +144,14 @@ void handleSave() {
 
 void sendPostRequest(String api, String jsonData) {
   if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    http.begin("http://" + String(FASTAPI_HOST) + ":" + String(FASTAPI_PORT) + api);
-    http.addHeader("Content-Type", "application/json");
-    int httpResponseCode = http.POST(jsonData);
-
-    if (httpResponseCode <= 0) {
-      Serial.printf(http.errorToString(httpResponseCode).c_str());
-    }
-    http.end();
+    // HTTPClient http;
+    // http.begin("http://" + String(FASTAPI_HOST) + ":" + String(FASTAPI_PORT) + api);
+    // http.addHeader("Content-Type", "application/json");
+    // int httpResponseCode = http.POST(jsonData);
+    // if (httpResponseCode <= 0) {
+    //   Serial.printf(http.errorToString(httpResponseCode).c_str());
+    // }
+    // http.end();
   }
 }
 
@@ -191,11 +192,10 @@ void predictWithModel(void* pvParameters) {
           return;
         }
       }
-      
+
       sendPostRequest(
         "/api/public/v1/mpu-pred-cls",
-        "{\"mpu_best_class\":\"" + runInference(input_data) + "\",\"user_id\":" + String(USER_ID) + "}"
-        );
+        "{\"mpu_best_class\":\"" + runInference(input_data) + "\",\"user_id\":" + String(USER_ID) + "}");
       Serial.println("Locking in 2s...");
       vTaskDelay(pdMS_TO_TICKS(2000));
       isLocking = false;
@@ -206,6 +206,8 @@ void predictWithModel(void* pvParameters) {
 
 void readMPU6050Task(void* pvParameters) {
   float sample[6];
+  float pre_data[6];
+  const int MAX_THRESHOLD = 4;
   sensors_event_t a, g, temp;
 
   while (1) {
@@ -215,14 +217,14 @@ void readMPU6050Task(void* pvParameters) {
     if (isLocking) {
       Serial.print(".");
     } else if (isReceiving
-      || abs(a.acceleration.x) <= 8 || 12 <= abs(a.acceleration.x)
-      || abs(a.acceleration.y) <= -3 || 3 <= abs(a.acceleration.y)
-      || abs(a.acceleration.z) <= -3 || 3 <= abs(a.acceleration.z)) {
-      
-      if (isReceiving == false) {
-        sendPostRequest("/api/public/v1/on-cam-pred-sts", "{\"user_id\":" + String(USER_ID) + "}");
-        Serial.println();
-      }
+        || abs(a.acceleration.x - pre_data[0]) >= MAX_THRESHOLD
+        || abs(a.acceleration.y - pre_data[1]) >= MAX_THRESHOLD
+        || abs(a.acceleration.z - pre_data[2]) >= MAX_THRESHOLD) {
+
+      // if (isReceiving == false) {
+      //   sendPostRequest("/api/public/v1/on-cam-pred-sts", "{\"user_id\":" + String(USER_ID) + "}");
+      //   Serial.println();
+      // }
       isReceiving = true;
 
       sample[0] = a.acceleration.x;
@@ -232,7 +234,15 @@ void readMPU6050Task(void* pvParameters) {
       sample[4] = g.gyro.y;
       sample[5] = g.gyro.z;
 
+      pre_data[0] = a.acceleration.x;
+      pre_data[1] = a.acceleration.y;
+      pre_data[2] = a.acceleration.z;
+      pre_data[3] = g.gyro.x;
+      pre_data[4] = g.gyro.y;
+      pre_data[5] = g.gyro.z;
+
       Serial.printf("x: %f, y: %f, z: %f", sample[0], sample[1], sample[2]);
+      // Serial.printf("%llu,%f,%f,%f,%f,%f,%f", (unsigned long long)esp_timer_get_time(), sample[0], sample[1], sample[2], sample[3], sample[4], sample[5]);
       Serial.println();
 
       if (xQueueSend(mpuQueue, &sample, portMAX_DELAY) != pdPASS) {
@@ -313,9 +323,9 @@ void localServerSetup() {
 
 void setup() {
   Serial.begin(115200);
-  loadConfigFromPrefs();  // Load all stored params in preferences
+  //loadConfigFromPrefs();  // Load all stored params in preferences
 
-  localServerSetup();
+  //localServerSetup();
   mpu6050Setup();
   predictionModelSetup();
   threadsSetup();
