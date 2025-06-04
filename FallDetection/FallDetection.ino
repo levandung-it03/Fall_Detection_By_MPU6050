@@ -35,7 +35,7 @@ constexpr int tensorArenaSize = 32 * 1024;
 byte tensorArena[tensorArenaSize] __attribute__((aligned(16)));
 
 // Gesture names
-const char* GESTURES[] = { "fall_back", "fall_forw", "stand", "chill" };
+const char* GESTURES[] = { "Fall Back", "Fall Forward", "Stand", "Chill" };
 // const char* GESTURES[] = { "stand", "chill" };
 #define NUM_GESTURES (sizeof(GESTURES) / sizeof(GESTURES[0]))
 
@@ -144,14 +144,15 @@ void handleSave() {
 
 void sendPostRequest(String api, String jsonData) {
   if (WiFi.status() == WL_CONNECTED) {
-    // HTTPClient http;
-    // http.begin("http://" + String(FASTAPI_HOST) + ":" + String(FASTAPI_PORT) + api);
-    // http.addHeader("Content-Type", "application/json");
-    // int httpResponseCode = http.POST(jsonData);
-    // if (httpResponseCode <= 0) {
-    //   Serial.printf(http.errorToString(httpResponseCode).c_str());
-    // }
-    // http.end();
+    HTTPClient http;
+    http.begin("http://" + String(FASTAPI_HOST) + ":" + String(FASTAPI_PORT) + api);
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("X-User-Id", String(USER_ID));
+    int httpResponseCode = http.POST(jsonData);
+    if (httpResponseCode <= 0) {
+      Serial.printf(http.errorToString(httpResponseCode).c_str());
+    }
+    http.end();
   }
 }
 
@@ -196,9 +197,6 @@ void predictWithModel(void* pvParameters) {
       sendPostRequest(
         "/api/public/v1/mpu-pred-cls",
         "{\"mpu_best_class\":\"" + runInference(input_data) + "\",\"user_id\":" + String(USER_ID) + "}");
-      Serial.println("Locking in 2s...");
-      vTaskDelay(pdMS_TO_TICKS(2000));
-      isLocking = false;
     }
     vTaskDelay(pdMS_TO_TICKS(SENSOR_DELAY));
   }
@@ -215,16 +213,21 @@ void readMPU6050Task(void* pvParameters) {
     // Checking every beginning of the next block(10lines), except the 1fs line (in total 60lines).
     // The current mpu6050 data is beginning of a block = mpuQueue has enough "n" blocks (10lines, 20lines, 30lines...).
     if (isLocking) {
-      Serial.print(".");
+      Serial.println("Locking in 1s...");
+      for (int i = 1; i <= 20; i++) {
+        Serial.print(".");
+        vTaskDelay(50);
+      }
+      isLocking = false;
     } else if (isReceiving
         || abs(a.acceleration.x - pre_data[0]) >= MAX_THRESHOLD
         || abs(a.acceleration.y - pre_data[1]) >= MAX_THRESHOLD
         || abs(a.acceleration.z - pre_data[2]) >= MAX_THRESHOLD) {
 
-      // if (isReceiving == false) {
-      //   sendPostRequest("/api/public/v1/on-cam-pred-sts", "{\"user_id\":" + String(USER_ID) + "}");
-      //   Serial.println();
-      // }
+      if (isReceiving == false) {
+        sendPostRequest("/api/public/v1/on-cam-pred-sts", "{\"user_id\":" + String(USER_ID) + "}");
+        Serial.println();
+      }
       isReceiving = true;
 
       sample[0] = a.acceleration.x;
@@ -323,19 +326,20 @@ void localServerSetup() {
 
 void setup() {
   Serial.begin(115200);
-  //loadConfigFromPrefs();  // Load all stored params in preferences
+  loadConfigFromPrefs();  // Load all stored params in preferences
 
-  //localServerSetup();
+  localServerSetup();
   mpu6050Setup();
   predictionModelSetup();
   threadsSetup();
+  Serial.println("Loaded Config: " + FASTAPI_HOST + "," + FASTAPI_PORT + "," + USER_ID);
 }
 
 void loop() {
   vTaskDelay(pdMS_TO_TICKS(1000));
-  // Serial.println("Loaded Config: " + FASTAPI_HOST + "," + FASTAPI_PORT + "," + USER_ID);
-  // delay(2000);
 }
+
+// delay(2000);
 
 // #include <Preferences.h>
 // Preferences preferences;
